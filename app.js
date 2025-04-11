@@ -73,25 +73,17 @@ app.post("/upload", upload.array("files", 100), async (req, res) => {
 
     console.log("Upload Promises:", uploadPromises);
 
-    try {
-      uploadResults = await Promise.all(uploadPromises);
-    } catch (uploadError) {
-      console.error("Error uploading files :", uploadError);
-      return res.status(500).send("Error uploading files.");
-    }
+    uploadResults = await Promise.all(uploadPromises);
+    console.log("Upload Results:", uploadResults);
     fileDetails.files.push(...uploadResults);
     fileDetails.totalSize += req.files.reduce(
       (acc, file) => acc + file.size,
       0
     );
-
-    // Ensure RabbitMQ is connected and the channel is ready before sending to the queue
     if (!channel || !connection) {
       console.log("Reconnecting to RabbitMQ...");
       await connectToRabbitMQ();
     }
-
-    // Send file details to the RabbitMQ queue
     channel.sendToQueue(
       "fileUploadQueue",
       Buffer.from(JSON.stringify(fileDetails)),
